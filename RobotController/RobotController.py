@@ -1,8 +1,6 @@
-from controller import Robot, Camera, Lidar, Display
+from controller import Robot, Keyboard
 
 robot = Robot()
-# display = Display("camera_display")
-
 print("Code updated")
 
 
@@ -34,7 +32,6 @@ class PioneerControllers:
         # self.lidar = robot.getDevice("lidar")
         self.camera = robot.getDevice("camera")
         self.camera_width = self.camera.getWidth()
-        self.camera_height = self.camera.getHeight()
 
         if not self.camera:
             print("Error: Camera not found!")
@@ -43,11 +40,27 @@ class PioneerControllers:
 
         self.camera.enable(PioneerControllers.time_step)
 
+        self.lidar = robot.getDevice("lidar")
+
+        if not self.lidar:
+            print("Error: lidar not found!")
+            robot.cleanup()
+            exit(1)
+
+        self.lidar.enable(PioneerControllers.time_step)
+        self.lidar.enablePointCloud()
+
     def moveFoward(self):
         self.front_left.setVelocity(self.default_speed)
         self.front_right.setVelocity(self.default_speed)
         self.rear_left.setVelocity(self.default_speed)
         self.rear_right.setVelocity(self.default_speed)
+
+    def moveBackward(self):
+        self.front_left.setVelocity(-self.default_speed)
+        self.front_right.setVelocity(-self.default_speed)
+        self.rear_left.setVelocity(-self.default_speed)
+        self.rear_right.setVelocity(-self.default_speed)
 
     def moveFowardRight(self):
         self.front_left.setVelocity(self.default_speed)
@@ -77,23 +90,49 @@ class PioneerControllers:
         self.front_right.setVelocity(-self.default_speed)
         self.rear_right.setVelocity(-self.default_speed)
 
+    def stop(self):
+        self.front_left.setVelocity(0.0)
+        self.rear_left.setVelocity(0.0)
+
+        self.front_right.setVelocity(0.0)
+        self.rear_right.setVelocity(0.0)
+
     def streamImage(self):
         image = self.camera.getImageArray()
 
         return image
 
+    def lidarData(self):
+        return self.lidar.getPointCloud()
+
 
 # Initialize Robot
 pioneer = PioneerControllers()
+keyboard = Keyboard()
 
+keyboard.enable(PioneerControllers.time_step)
 
 while robot.step(PioneerControllers.time_step) != -1:
-    print("matrix output", pioneer.streamImage())
+    key = keyboard.getKey()
+    print("keystroke", key)
 
+    if key == -1:
+        pioneer.stop()
 
-# devices = []
-# qtd_devices = robot.getNumberOfDevices()
+    if key == ord("W"):
+        pioneer.moveFoward()
 
-# for i in range(qtd_devices):
-#    devices.append(robot.getDeviceByIndex(i).getName())
-# print("devices", devices)
+    if key == ord("S"):
+        pioneer.moveBackward()
+
+    if key == ord("A"):
+        pioneer.rotateLeft()
+
+    if key == ord("D"):
+        pioneer.rotateRight()
+
+    if key == ord("L"):
+        print("lidar data", pioneer.lidarData())
+
+    if key == ord("C"):
+        print("camera image", pioneer.streamImage())
