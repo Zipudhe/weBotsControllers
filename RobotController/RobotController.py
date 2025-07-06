@@ -1,8 +1,7 @@
-from controller import Robot, Camera, Lidar
+from controller import Robot, Camera, Lidar, Display
 
 robot = Robot()
-camera = Camera("camera")
-lidar = Lidar("lidar")
+# display = Display("camera_display")
 
 print("Code updated")
 
@@ -31,6 +30,18 @@ class PioneerControllers:
         for motor in [front_left, front_right, rear_left, rear_right]:
             motor.setPosition(float("inf"))
             motor.setVelocity(0.0)
+
+        # self.lidar = robot.getDevice("lidar")
+        self.camera = robot.getDevice("camera")
+        self.camera_width = self.camera.getWidth()
+        self.camera_height = self.camera.getHeight()
+
+        if not self.camera:
+            print("Error: Camera not found!")
+            robot.cleanup()
+            exit(1)
+
+        self.camera.enable(PioneerControllers.time_step)
 
     def moveFoward(self):
         self.front_left.setVelocity(self.default_speed)
@@ -66,13 +77,18 @@ class PioneerControllers:
         self.front_right.setVelocity(-self.default_speed)
         self.rear_right.setVelocity(-self.default_speed)
 
+    def streamImage(self):
+        image = self.camera.getImageArray()
 
-# InitializeMotors
+        return image
+
+
+# Initialize Robot
 pioneer = PioneerControllers()
 
 
 while robot.step(PioneerControllers.time_step) != -1:
-    pioneer.rotateRight()
+    print("matrix output", pioneer.streamImage())
 
 
 # devices = []
@@ -81,4 +97,3 @@ while robot.step(PioneerControllers.time_step) != -1:
 # for i in range(qtd_devices):
 #    devices.append(robot.getDeviceByIndex(i).getName())
 # print("devices", devices)
-
