@@ -1,4 +1,6 @@
-from controller import Robot, Keyboard
+from controller import Keyboard, Robot
+
+from utils.io import write_lidar_object_data, write_matrix_data
 
 robot = Robot()
 print("Code updated")
@@ -99,11 +101,14 @@ class PioneerControllers:
 
     def streamImage(self):
         image = self.camera.getImageArray()
+        write_matrix_data(image)
 
         return image
 
     def lidarData(self):
-        return self.lidar.getPointCloud()
+        lidar_data = self.lidar.getPointCloud()
+        write_lidar_object_data(lidar_data)
+        return lidar_data
 
 
 # Initialize Robot
@@ -114,7 +119,6 @@ keyboard.enable(PioneerControllers.time_step)
 
 while robot.step(PioneerControllers.time_step) != -1:
     key = keyboard.getKey()
-    print("keystroke", key)
 
     if key == -1:
         pioneer.stop()
@@ -132,7 +136,14 @@ while robot.step(PioneerControllers.time_step) != -1:
         pioneer.rotateRight()
 
     if key == ord("L"):
-        print("lidar data", pioneer.lidarData())
+        pioneer.lidarData()
 
     if key == ord("C"):
-        print("camera image", pioneer.streamImage())
+        pioneer.streamImage()
+
+    if key == ord("K"):
+        print("getting camera and lidar sample")
+        pioneer.streamImage()
+        print("image saved")
+        pioneer.lidarData()
+        print("lidar saved")
