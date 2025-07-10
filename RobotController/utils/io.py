@@ -15,3 +15,5 @@ def write_lidar_object_data(lidar_data):
     with open("../lidar_data.csv", "a") as file:
         writer = csv.writer(file, delimiter=",")
         writer.writerow(flat_lidar_points)
+        
+

@@ -1,4 +1,4 @@
-from controller import Keyboard, Robot
+from controller import Keyboard, Robot, Lidar
 
 from utils.io import write_lidar_object_data, write_matrix_data
 
@@ -31,7 +31,6 @@ class PioneerControllers:
             motor.setPosition(float("inf"))
             motor.setVelocity(0.0)
 
-        # self.lidar = robot.getDevice("lidar")
         self.camera = robot.getDevice("camera")
         self.camera_width = self.camera.getWidth()
 
@@ -42,7 +41,7 @@ class PioneerControllers:
 
         self.camera.enable(PioneerControllers.time_step)
 
-        self.lidar = robot.getDevice("lidar")
+        self.lidar: Lidar = robot.getDevice("lidar")
 
         if not self.lidar:
             print("Error: lidar not found!")
