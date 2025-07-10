@@ -20,14 +20,29 @@ def write_lidar_object_data(lidar_data):
         writer = csv.writer(file, delimiter=",")
         writer.writerow(flat_lidar_points)
         
-def show_lidar_img(point_cloud: list[pp.LidarPoint], resolution = 64):
-    depth_img = pp.point_cloud_to_image(point_cloud, resolution)
-    visualize_depth_map(depth_img)
+def show_lidar_img(range_img: list[float], width: int, height: int, max_range: float):
+    """
+    Função para visualizar imagem de profundidade LiDAR.
+
+    A imagem de profundidade  uma lista de floats com valores de profundidade
+    para cada pixel. A função retorna uma imagem de profundidade em RGB.
+
+    Parâmetros:
+        range_img (list[float]): Imagem de profundidade a ser visualizada.
+        width (int): Largura da imagem.
+        height (int): Altura da imagem.
+        maxRange (float): Valor máximo de profundidade.
+
+    Retorna:
+        Uma imagem de profundidade em RGB.
+    """
+    depth_img = pp.range_img_to_img(range_img, width, height, max_range)
+    visualize_depth_map(depth_img, max_range)
         
 
-def visualize_depth_map(depth_map: np.ndarray):
+def visualize_depth_map(depth_map: np.ndarray, max_range: float):
     """
-    Fun o para visualizar mapas de profundidade.
+    Função para visualizar mapas de profundidade.
 
     O mapa de profundidade  um array 2D com valores de profundidade
     para cada píxel. A função retorna um array 3D com a profundidade
@@ -45,7 +60,7 @@ def visualize_depth_map(depth_map: np.ndarray):
     plt.imshow(depth_map, 
                cmap='jet_r', 
                vmin=0, 
-               vmax=1)
+               vmax=max_range)
     
     # Adicionar barra de cores com valores em metros
     cbar = plt.colorbar()

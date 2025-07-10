@@ -1,53 +1,25 @@
-import math
 import numpy as np
-from controller import LidarPoint
 
 
-def point_cloud_to_image(point_cloud: list[LidarPoint], resolution = 64): 
+def range_img_to_img(range_img: list[float], width: int, height: int, max_range: float):
+    """Converte uma imagem de profundidade em uma imagem 2D.
+
+    A imagem de profundidade  uma lista de floats com valores de profundidade
+    para cada p xel. A fun o retorna um array 2D com a profundidade
+    convertida para uma cor.
+
+    Par metros:
+        range_img (list[float]): Imagem de profundidade a ser convertida.
+        width (int): Largura da imagem.
+        height (int): Altura da imagem.
+        maxRange (float): Valor m ximo de profundidade.
+
+    Retorna:
+        Uma imagem de profundidade em RGB.
     """
-    Converte um point cloud em uma imagem de profundidade.
-
-    Args:
-        point_cloud (list[LidarPoint]): O point cloud a ser convertido.
-        resolution (int, optional): A resoluo da imagem de profundidade. Defaults to 64.
-
-    Returns:
-        depth_img (np.ndarray): A imagem de profundidade.
-    """
-
-    depth_img = np.zeros((resolution, resolution))
-     
-    for point in point_cloud:
-        # normalizar as coordenadas
-        if math.isinf(point.x):
-            if point.x < 0:
-                x = -1
-            else:
-                x = 1
-        else:
-            x = point.x
-            
-        if math.isinf(point.y):
-            if point.y < 0:
-                y = -1
-            else:
-                y = 1
-        else:
-            y = point.y
-            
-        if math.isinf(point.z):
-            if point.z < 0:
-                z = -1
-            else:
-                z = 1
-        else:
-            z = point.z
-        
-        
-        # fazer "flatten" nas coordenadas
-        u = int((np.arctan2(y, x) + np.pi) / (2 * np.pi) * resolution)
-        v = int((np.arcsin(z / np.sqrt(x ** 2 + y ** 2 + z ** 2)) * resolution) / np.pi + resolution / 2)  
-        if 0 <= u < resolution and 0 <= v < resolution:
-            distance = np.sqrt(x ** 2 + y ** 2 + z ** 2)
-            depth_img[v, u] = distance
-    return depth_img
+    img = np.array(range_img).reshape(height, width)
+    
+    # normalizar
+    normalized = np.nan_to_num(img / max_range, posinf=1, neginf=0)
+    
+    return normalized

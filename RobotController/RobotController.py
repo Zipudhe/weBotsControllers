@@ -135,7 +135,10 @@ while robot.step(PioneerControllers.time_step) != -1:
         pioneer.rotateRight()
 
     if key == ord("L"):
-        show_lidar_img(pioneer.lidarData())
+        lidar = pioneer.lidar
+        
+        pioneer.lidarData()
+        show_lidar_img(lidar.getRangeImage(), lidar.getHorizontalResolution(), lidar.getNumberOfLayers(), lidar.getMaxRange())
 
     if key == ord("C"):
         pioneer.streamImage()
