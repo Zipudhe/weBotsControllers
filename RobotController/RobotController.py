@@ -1,6 +1,6 @@
 from controller import Keyboard, Robot, Lidar
 
-from utils.io import write_lidar_object_data, write_matrix_data
+from utils.io import show_lidar_img, write_lidar_object_data, write_matrix_data
 
 robot = Robot()
 print("Code updated")
@@ -135,7 +135,7 @@ while robot.step(PioneerControllers.time_step) != -1:
         pioneer.rotateRight()
 
     if key == ord("L"):
-        pioneer.lidarData()
+        show_lidar_img(pioneer.lidarData())
 
     if key == ord("C"):
         pioneer.streamImage()
