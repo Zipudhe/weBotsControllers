@@ -1,5 +1,5 @@
-import csv
-import cv2
+import sys
+import torch
 import matplotlib.pyplot as plt
 import numpy as np
 import utils.pre_processing as pp
@@ -11,14 +11,12 @@ def write_matrix_data(matrix):
     fout.close()
 
 
-def write_lidar_object_data(lidar_data):
-    flat_lidar_points = [
-        coord for point in lidar_data for coord in (point.x, point.y, point.z)
-    ]
+def write_lidar_object_data(lidar_data, width, height, max_range):
+    depth_img = pp.range_img_to_img(lidar_data, width, height, max_range)
 
-    with open("../lidar_data.csv", "a") as file:
-        writer = csv.writer(file, delimiter=",")
-        writer.writerow(flat_lidar_points)
+    fout = open("../lidar_object_data.txt", "a")
+    fout.write(np.array2string(depth_img, max_line_width=sys.maxsize, threshold=sys.maxsize) + "\n")
+    fout.close()
         
 def show_lidar_img(range_img: list[float], width: int, height: int, max_range: float):
     """
@@ -39,6 +37,13 @@ def show_lidar_img(range_img: list[float], width: int, height: int, max_range: f
     depth_img = pp.range_img_to_img(range_img, width, height, max_range)
     visualize_depth_map(depth_img, max_range)
         
+
+def show_camera_img(matrix):
+    plt.figure(figsize=(10, 8))
+    plt.imshow(matrix)
+    plt.axis('off')
+    plt.title('Imagem da câmera')
+    plt.show()
 
 def visualize_depth_map(depth_map: np.ndarray, max_range: float):
     """
