@@ -1,5 +1,4 @@
 import sys
-import torch
 import matplotlib.pyplot as plt
 import numpy as np
 import utils.pre_processing as pp
