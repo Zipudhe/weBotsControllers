@@ -27,55 +27,19 @@ def range_img_to_img(range_img: list[float], width: int, height: int, max_range:
     
     return normalized
 
-def get_rgb_tensor(camera_data: List[List[List[int]]]):
-    """
-    Converte dados da câmera em um tensor RGB normalizado.
+# Transformações específicas para DINOv2
+preprocess = transforms.Compose([
+    transforms.Resize(256),
+    transforms.CenterCrop(224),
+    transforms.ToTensor(),
+    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+])
 
-    Esta função aplica uma série de transformações aos dados de imagem
-    fornecidos pela câmera, resultando em um tensor RGB que pode ser usado
-    em modelos de visão computacional.
-
-    Parâmetros:
-        camera_data: Dados da imagem capturada pela câmera, representados
-        como um array.
-
-    Retorna:
-        Um tensor RGB normalizado, com tamanho 224x224, pronto para uso
-        em redes neurais.
-    """
-
-    rgb_transform = transforms.Compose([
-        transforms.Resize(224),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
+def prepare_inputs(rgb, depth, device):
+    # Converter depth para 3 canais
+    depth_rgb = depth.repeat(3,1,1) if depth.shape[0]==1 else depth
     
-    rgb_tensor = rgb_transform(Image.fromarray(camera_data))
-    return rgb_tensor
-
-def get_depth_tensor(depth_img: np.ndarray):
-    """
-    Converte uma imagem de profundidade em um tensor RGB normalizado.
-
-    Esta fun o aplica uma s rie de transforma es  imagem de profundidade
-    fornecida, resultando em um tensor RGB que pode ser usado
-    em modelos de vis o computacional.
-
-    Par metros:
-        depth_img: Imagem de profundidade, representada como um array 2D.
-
-    Retorna:
-        Um tensor RGB normalizado, com tamanho 224x224, pronto para uso
-        em redes neurais.
-    """
-    depth_transform = transforms.Compose([
-        transforms.Resize(224),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
-    
-    depth_tensor = depth_transform(depth_img)
-    return depth_tensor
+    return {
+        'rgb': preprocess(rgb).unsqueeze(0).to(device),
+        'depth': preprocess(depth_rgb).unsqueeze(0).to(device)
+    }
