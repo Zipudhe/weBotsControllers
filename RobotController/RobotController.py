@@ -1,6 +1,6 @@
-from controller import Keyboard, Robot
+from controller import Keyboard, Robot, Lidar, Camera
 
-from utils.io import write_lidar_object_data, write_matrix_data
+from utils.io import show_lidar_img, write_lidar_object_data, write_matrix_data, show_camera_img
 
 robot = Robot()
 print("Code updated")
@@ -31,8 +31,7 @@ class PioneerControllers:
             motor.setPosition(float("inf"))
             motor.setVelocity(0.0)
 
-        # self.lidar = robot.getDevice("lidar")
-        self.camera = robot.getDevice("camera")
+        self.camera: Camera = robot.getDevice("camera")
         self.camera_width = self.camera.getWidth()
 
         if not self.camera:
@@ -42,7 +41,7 @@ class PioneerControllers:
 
         self.camera.enable(PioneerControllers.time_step)
 
-        self.lidar = robot.getDevice("lidar")
+        self.lidar: Lidar = robot.getDevice("lidar")
 
         if not self.lidar:
             print("Error: lidar not found!")
@@ -106,8 +105,12 @@ class PioneerControllers:
         return image
 
     def lidarData(self):
-        lidar_data = self.lidar.getPointCloud()
-        write_lidar_object_data(lidar_data)
+        lidar_data = self.lidar.getRangeImage()
+        lidar_width = self.lidar.getHorizontalResolution()
+        lidar_height = self.lidar.getNumberOfLayers()
+        lidar_max_range = self.lidar.getMaxRange()
+        
+        write_lidar_object_data(lidar_data, lidar_width, lidar_height, lidar_max_range)
         return lidar_data
 
 
@@ -136,10 +139,12 @@ while robot.step(PioneerControllers.time_step) != -1:
         pioneer.rotateRight()
 
     if key == ord("L"):
-        pioneer.lidarData()
+        lidar = pioneer.lidar
+        
+        show_lidar_img(pioneer.lidarData(), lidar.getHorizontalResolution(), lidar.getNumberOfLayers(), lidar.getMaxRange())
 
     if key == ord("C"):
-        pioneer.streamImage()
+        show_camera_img(pioneer.streamImage())
 
     if key == ord("K"):
         print("getting camera and lidar sample")
