@@ -1,5 +1,6 @@
 from typing import List
 import numpy as np
+import torch
 from torchvision import transforms
 from PIL import Image
 
@@ -27,19 +28,23 @@ def range_img_to_img(range_img: list[float], width: int, height: int, max_range:
     
     return normalized
 
-# Transformações específicas para DINOv2
-preprocess = transforms.Compose([
-    transforms.Resize(256),
-    transforms.CenterCrop(224),
+# Transformações para RGB
+rgb_transform = transforms.Compose([
     transforms.ToTensor(),
+    transforms.Resize((224, 224)),
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 ])
 
-def prepare_inputs(rgb, depth, device):
-    # Converter depth para 3 canais
-    depth_rgb = depth.repeat(3,1,1) if depth.shape[0]==1 else depth
-    
-    return {
-        'rgb': preprocess(rgb).unsqueeze(0).to(device),
-        'depth': preprocess(depth_rgb).unsqueeze(0).to(device)
-    }
+# Transformações para Depth
+depth_transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Resize((224, 224)),
+    transforms.Lambda(lambda x: x.repeat(3, 1, 1) if x.shape[0] == 1 else x),  # Converter para 3 canais
+    transforms.Normalize([0.5], [0.5])  # Normalização simples para depth
+])
+
+def preprocess_data(rgb, depth):
+    """Pré-processa um lote de imagens RGB e Depth"""
+    processed_rgb = torch.stack([rgb_transform(img) for img in rgb])
+    processed_depth = torch.stack([depth_transform(img) for img in depth])
+    return processed_rgb, processed_depth
