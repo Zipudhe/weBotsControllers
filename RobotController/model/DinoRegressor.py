@@ -41,25 +41,26 @@ class DinoRegressor(nn.Module):
                 inputs = self.imgProcessor(images=images[j, i, :, :, :], return_tensors="pt", device='cuda' if torch.cuda.is_available() else 'cpu')
                 outputs = self.dino(**inputs)
                 
-                embeddings = outputs.last_hidden_state[0, :, :].detach().numpy()
+                embeddings = outputs.last_hidden_state[0, :, :]
                 cls_token = embeddings[0, :]
                     
                 # pega os patches com maiores attention
-                attentions = outputs.attentions[-1].detach().numpy()
+                attentions = outputs.attentions[-1]
                 attention = attentions[0, :, 0, 1:].mean(axis=0)
-                top_patches = np.argsort(attention)[-top_k:]
+                top_patches = torch.argsort(attention)[-top_k:]
                 top_patch_emb = embeddings[1:][top_patches].flatten()
                     
-                features.append(np.concatenate([cls_token, top_patch_emb]))
+                features.append(torch.cat([cls_token, top_patch_emb]))
             
-            bundle_features.append(np.concatenate(features))
+            bundle_features.append(torch.cat(features))
         
-        return np.vstack(bundle_features)
+        bundle_features_cpu = [tensor.cpu().detach().numpy() for tensor in bundle_features]
+        return np.vstack(bundle_features_cpu)
         
         
 
     def forward(self, x):
-        features = torch.from_numpy(self.extract_features(x))
+        features = torch.from_numpy(self.extract_features(x, self.top_k)).to('cuda')
         
         return self.regressor(features)
     

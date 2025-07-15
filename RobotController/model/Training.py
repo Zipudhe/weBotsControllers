@@ -1,3 +1,4 @@
+from matplotlib import pyplot as plt
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, random_split
@@ -11,10 +12,10 @@ if __name__ == '__main__':
     val_size = len(dataset.rgb_data) - train_size # 20%
     train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
-    trainloader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=4)
-    valloader = DataLoader(val_dataset, batch_size=16, shuffle=False, num_workers=4)
+    trainloader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=8)
+    valloader = DataLoader(val_dataset, batch_size=4, shuffle=False, num_workers=8)
     
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     total_epochs = 50
     total_samples = len(dataset)
@@ -23,6 +24,8 @@ if __name__ == '__main__':
     criterion = nn.MSELoss()
     optimizer = optim.AdamW(model.parameters(), lr=1e-2, weight_decay=0.01)
     
+    losses_train = []
+    losses_val = []
     
     # loop over the dataset multiple times
     for epoch in range(total_epochs):
@@ -49,7 +52,7 @@ if __name__ == '__main__':
             
             loss_dist = criterion(outputs[:, 0], labels[:, 0])  # Loss para dist
             loss_angle = criterion(outputs[:, 1], labels[:, 1])  # Loss para angle
-            loss = loss_dist + loss_angle
+            loss = criterion(outputs, labels)
             
             loss.backward()
             optimizer.step()
@@ -76,7 +79,7 @@ if __name__ == '__main__':
                 
                 loss_dist = criterion(outputs[:, 0], labels[:, 0])  # Loss para dist
                 loss_angle = criterion(outputs[:, 1], labels[:, 1])  # Loss para angle
-                loss = loss_dist + loss_angle
+                loss = criterion(outputs, labels)
                 
                 val_running_loss_dist += loss_dist.item()
                 val_running_loss_angle += loss_angle.item()
@@ -89,6 +92,28 @@ if __name__ == '__main__':
         print(f'Loss Dist: {val_running_loss_dist:.4f}')
         print(f'Loss Angle: {val_running_loss_angle:.4f}')
         print(f'Loss Total: {val_running_loss_total:.4f}')
+        
+        # salva as losses de cada epoch
+        losses_train.append((running_loss_dist, running_loss_angle, running_loss_total))
+        losses_val.append((val_running_loss_dist, val_running_loss_angle, val_running_loss_total))
+        
+    plt.figure(figsize=(15, 5))
+        
+    plt.subplot(1, 2, 1)
+    plt.plot(range(1, len(losses_train) + 1), losses_train[2], label='Training Total Loss', color='blue')
+    plt.plot(range(1, len(losses_val) + 1), losses_val[2], label='Validation Total Loss', color='orange')
+    plt.plot(range(1, len(losses_train) + 1), losses_train[0], label='DistToObject Training Loss', color='green')
+    plt.plot(range(1, len(losses_val) + 1), losses_val[2], label='DistToObject Validation Loss', color='red')
+    plt.plot(range(1, len(losses_train) + 1), losses_train[0], label='AngTarget Training Loss', color='purple')
+    plt.plot(range(1, len(losses_val) + 1), losses_val[2], label='AngTarget Validation Loss', color='cyan')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss (MSE)')
+    plt.title('Training and Validation Loss')
+    plt.legend()
+    plt.grid(True)
+        
+    plt.tight_layout()
+    plt.show()
     
     print('Finished Training')
     torch.save(model.parameters(), 'dino_regressor.pth')
