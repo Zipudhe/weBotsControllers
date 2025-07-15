@@ -1,15 +1,20 @@
 import numpy as np
-from utils.utils import calculate_targets, generate_position
-from controller import Keyboard, Robot, Lidar, Camera, Supervisor
-from utils.io import show_lidar_img, write_lidar_object_data, write_matrix_data, show_camera_img
 import utils.pre_processing as pp
+from controller import Camera, Keyboard, Lidar, Robot, Supervisor
+from utils.io import (
+    show_camera_img,
+    show_lidar_img,
+    write_lidar_object_data,
+    write_matrix_data,
+)
+from utils.utils import calculate_targets, generate_position
 
 # robot = Robot() # para uso real
-robot = Supervisor() # para treinamento
+robot = Supervisor()  # para treinamento
 if robot is None:
     print("Robô não está em modo de treinamento!")
     exit()
-    
+
 print("Code updated")
 
 
@@ -116,40 +121,42 @@ class PioneerControllers:
         lidar_width = self.lidar.getHorizontalResolution()
         lidar_height = self.lidar.getNumberOfLayers()
         lidar_max_range = self.lidar.getMaxRange()
-        
+
         write_lidar_object_data(lidar_data, lidar_width, lidar_height, lidar_max_range)
         return lidar_data
-    
-    def set_position(self, x, y, theta): # só pode ser usado para treinamento, com o supervisor true e def do robo "Pioneer"
+
+    def set_position(
+        self, x, y, theta
+    ):  # só pode ser usado para treinamento, com o supervisor true e def do robo "Pioneer"
         robot_node = robot.getSelf()
         translation = robot_node.getField("translation")
-        
+
         translation.setSFVec3f([x, y, 0])
-        
+
         rotation = robot_node.getField("rotation")
         rotation.setSFRotation([0, 0, 1, theta])
-        
+
     def wait_step(self):
         """Avança a simulação e espera o passo completar"""
         if robot.step(self.time_step) == -1:
             robot.cleanup()
             exit(0)
-    
+
     def collect_training_data(self, num_samples=1000):
         features_rgb = []
         features_depth = []
         targets_dist = []
         targets_angle = []
-        
+
         rng = np.random.default_rng()
         for i in range(num_samples):
             print(i)
             # posiciona robo aleatoriamente
             x, y = generate_position()
             theta = rng.uniform(0, 2 * np.pi)
-            
+
             self.set_position(x, y, theta)
-            
+
             self.wait_step()
             self.wait_step()
             self.wait_step()
@@ -172,32 +179,36 @@ class PioneerControllers:
             self.wait_step()
             self.wait_step()
             self.wait_step()
-            
-            
+
             # coleta dados
             rgb = self.streamImage()
             lidar = self.lidarData()
-            depth_img = pp.range_img_to_img(lidar, self.lidar.getHorizontalResolution(), self.lidar.getNumberOfLayers(), self.lidar.getMaxRange())
-            
+            depth_img = pp.range_img_to_img(
+                lidar,
+                self.lidar.getHorizontalResolution(),
+                self.lidar.getNumberOfLayers(),
+                self.lidar.getMaxRange(),
+            )
+
             # calcular targets
             dist, angle = calculate_targets(x, y, theta)
-            
-            
+
             # armazena dados
             features_rgb.append(rgb)
             features_depth.append(depth_img)
             targets_dist.append(dist)
             targets_angle.append(angle)
             print(np.shape(features_rgb))
-            
-        np.savez('training_data.npz',
-                    rgb=features_rgb,
-                    depth=features_depth,
-                    dist=targets_dist,
-                    angle=targets_angle)
-        
+
+        np.savez(
+            "training_data.npz",
+            rgb=features_rgb,
+            depth=features_depth,
+            dist=targets_dist,
+            angle=targets_angle,
+        )
+
         return features_rgb, features_depth, targets_dist, targets_angle
-    
 
 
 # Initialize Robot
@@ -226,8 +237,13 @@ while robot.step(PioneerControllers.time_step) != -1:
 
     if key == ord("L"):
         lidar = pioneer.lidar
-        
-        show_lidar_img(pioneer.lidarData(), lidar.getHorizontalResolution(), lidar.getNumberOfLayers(), lidar.getMaxRange())
+
+        show_lidar_img(
+            pioneer.lidarData(),
+            lidar.getHorizontalResolution(),
+            lidar.getNumberOfLayers(),
+            lidar.getMaxRange(),
+        )
 
     if key == ord("C"):
         show_camera_img(pioneer.streamImage())
@@ -238,6 +254,7 @@ while robot.step(PioneerControllers.time_step) != -1:
         print("image saved")
         pioneer.lidarData()
         print("lidar saved")
-    
+
     if key == ord("T"):
-        pioneer.collect_training_data(10)
+        pioneer.collect_training_data()
+
