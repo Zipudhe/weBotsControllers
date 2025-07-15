@@ -104,8 +104,10 @@ def closest_visible_object(camera_pos: np.ndarray, camera_rot, obstacles, fov=1.
     return closest, min_distance
 
 def calculate_targets(x, y, theta):
+        obstacles = obstaculos.copy()
+        obstacles.append(target_pos)
         
-        dist_to_obstacle = closest_visible_object(np.array([x, y]), theta, obstaculos)[1]
+        dist_to_obstacle = closest_visible_object(np.array([x, y]), theta, obstacles)[1]
         
         # angulo ao target
         vec_to_target = target_pos - np.array([x, y])

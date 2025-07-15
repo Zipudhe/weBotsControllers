@@ -7,7 +7,7 @@ from transformers import AutoModel, AutoImageProcessor
 
 
 class DinoRegressor(nn.Module): 
-    def __init__(self, dino_hidden_size=768, top_k=4):
+    def __init__(self, dino_hidden_size=768, top_k=2):
         super(DinoRegressor, self).__init__()
         self.dino_hidden_size = dino_hidden_size
         self.top_k = top_k

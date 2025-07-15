@@ -19,7 +19,7 @@ if __name__ == '__main__':
     total_epochs = 50
     total_samples = len(dataset)
     
-    model = DinoRegressor(top_k=4).to(device)
+    model = DinoRegressor(top_k=2).to(device)
     criterion = nn.MSELoss()
     optimizer = optim.AdamW(model.parameters(), lr=1e-2, weight_decay=0.01)
     
@@ -31,6 +31,8 @@ if __name__ == '__main__':
         running_loss_angle = 0.0
         running_loss_total = 0.0
         
+        print(f'Epoch {epoch+1}/{total_epochs}')
+        
         # Treinamento
         for i, data in enumerate(trainloader, 0):
             rgb, depth, dist, angle = data
@@ -38,7 +40,6 @@ if __name__ == '__main__':
             depth_resized = depth_resized.permute(0, 2, 3, 1)
             
             inputs, labels = torch.stack((rgb, depth_resized)).to(device), torch.stack((dist, angle)).permute(1, 0).float().to(device)
-            print(labels.shape)
     
             # zero the parameter gradients
             optimizer.zero_grad()
@@ -57,6 +58,10 @@ if __name__ == '__main__':
             running_loss_angle += loss_angle.item()
             running_loss_total += loss.item()
             
+        val_running_loss_dist = 0.0
+        val_running_loss_angle = 0.0
+        val_running_loss_total = 0.0    
+            
         # Validação
         model.eval()
         with torch.no_grad():
@@ -72,10 +77,18 @@ if __name__ == '__main__':
                 loss_dist = criterion(outputs[:, 0], labels[:, 0])  # Loss para dist
                 loss_angle = criterion(outputs[:, 1], labels[:, 1])  # Loss para angle
                 loss = loss_dist + loss_angle
+                
+                val_running_loss_dist += loss_dist.item()
+                val_running_loss_angle += loss_angle.item()
+                val_running_loss_total += loss.item()
     
-        print(f'Epoch {epoch+1}/{total_epochs}')
         print(f'Loss Dist: {running_loss_dist:.4f}')
         print(f'Loss Angle: {running_loss_angle:.4f}')
         print(f'Loss Total: {running_loss_total:.4f}')
+        print("----------------------- VALIDATION -----------------------")
+        print(f'Loss Dist: {val_running_loss_dist:.4f}')
+        print(f'Loss Angle: {val_running_loss_angle:.4f}')
+        print(f'Loss Total: {val_running_loss_total:.4f}')
     
     print('Finished Training')
+    torch.save(model.parameters(), 'dino_regressor.pth')
