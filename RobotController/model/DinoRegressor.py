@@ -32,26 +32,34 @@ class DinoRegressor(nn.Module):
             params.require_grad = False
         
     def extract_features(self, images, top_k=4):
-        features = []
-        for image in images:
-            inputs = self.imgProcessor(images=image, return_tensors="pt", device='cuda' if torch.cuda.is_available() else 'cpu')
-            outputs = self.dino(**inputs)
-            
-            embeddings = outputs.last_hidden_state[0, :, :].detach().numpy()
-            cls_token = embeddings[0, :]
-                
-            # pega os patches com maiores attention
-            attentions = outputs.attentions[-1].detach().numpy()
-            attention = attentions[0, :, 0, 1:].mean(axis=0)
-            top_patches = np.argsort(attention)[-top_k:]
-            top_patch_emb = embeddings[1:][top_patches].flatten()
-                
-            features.append(np.concatenate([cls_token, top_patch_emb]))
+        type_img, image, _, _, _ = images.shape
         
-        return np.concatenate(features)
+        bundle_features = []
+        for i in range(image):
+            features = []
+            for j in range(type_img):
+                inputs = self.imgProcessor(images=images[j, i, :, :, :], return_tensors="pt", device='cuda' if torch.cuda.is_available() else 'cpu')
+                outputs = self.dino(**inputs)
+                
+                embeddings = outputs.last_hidden_state[0, :, :].detach().numpy()
+                cls_token = embeddings[0, :]
+                    
+                # pega os patches com maiores attention
+                attentions = outputs.attentions[-1].detach().numpy()
+                attention = attentions[0, :, 0, 1:].mean(axis=0)
+                top_patches = np.argsort(attention)[-top_k:]
+                top_patch_emb = embeddings[1:][top_patches].flatten()
+                    
+                features.append(np.concatenate([cls_token, top_patch_emb]))
+            
+            bundle_features.append(np.concatenate(features))
+        
+        return np.vstack(bundle_features)
+        
+        
 
     def forward(self, x):
-        features = self.extract_features(x, top_k=self.top_k)
+        features = torch.from_numpy(self.extract_features(x))
         
         return self.regressor(features)
     
@@ -61,7 +69,10 @@ class RegressionDataset(Dataset):
         data = np.load('RobotController/training_data.npz')
         
         self.rgb_data = torch.from_numpy(data['rgb'])
-        self.depth_data = torch.from_numpy(data['depth'])
+        depth = np.zeros((len(self.rgb_data), 4, 512, 3))
+        depth[:, :, :, 0] = data['depth']
+        self.depth_data = torch.from_numpy(depth)
+        
         self.dist_data = torch.from_numpy(data['dist'])
         self.angle_data = torch.from_numpy(data['angle'])
 

@@ -240,4 +240,4 @@ while robot.step(PioneerControllers.time_step) != -1:
         print("lidar saved")
     
     if key == ord("T"):
-        pioneer.collect_training_data(10)
+        pioneer.collect_training_data(1000)
