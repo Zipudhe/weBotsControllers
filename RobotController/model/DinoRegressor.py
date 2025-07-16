@@ -15,16 +15,20 @@ class DinoRegressor(nn.Module):
         self.imgProcessor = AutoImageProcessor.from_pretrained("facebook/dinov2-base", use_fast=True)
         self.dino = AutoModel.from_pretrained("facebook/dinov2-base", device_map="auto", output_attentions=True, attn_implementation="eager")
         
-        self.regressor = nn.Sequential( # 1 camada oculta
-            nn.Linear(self.dino_hidden_size*(self.top_k + 1)*2, 4096),
-            nn.BatchNorm1d(4096),
+        self.regressor = nn.Sequential( # 4 camadas ocultas
+            nn.Linear(self.dino_hidden_size*(self.top_k + 1)*2, 1024),
+            nn.BatchNorm1d(1024),
             nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(4096, 2048),
-            nn.BatchNorm1d(2048),
+            nn.Dropout(0.1),
+            nn.Linear(1024, 256),
+            nn.BatchNorm1d(256),
             nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(2048, 2) # dist e angle
+            nn.Dropout(0.1),
+            nn.Linear(256, 64),
+            nn.BatchNorm1d(64),
+            nn.ReLU(),
+            nn.Dropout(0.1),
+            nn.Linear(64, 2) # dist e angle
         )
         
         # freeze dino
@@ -60,7 +64,7 @@ class DinoRegressor(nn.Module):
         
 
     def forward(self, x):
-        features = torch.from_numpy(self.extract_features(x, self.top_k)).to('cuda')
+        features = torch.from_numpy(self.extract_features(x, self.top_k)).to('cuda:0' if torch.cuda.is_available() else 'cpu')
         
         return self.regressor(features)
     

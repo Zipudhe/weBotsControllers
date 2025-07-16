@@ -1,14 +1,16 @@
 import numpy as np
+import torch
 from utils.utils import calculate_targets, generate_position
 from controller import Keyboard, Robot, Lidar, Camera, Supervisor
 from utils.io import show_lidar_img, write_lidar_object_data, write_matrix_data, show_camera_img
 import utils.pre_processing as pp
+from model.DinoRegressor import DinoRegressor
 
-# robot = Robot() # para uso real
-robot = Supervisor() # para treinamento
-if robot is None:
-    print("Robô não está em modo de treinamento!")
-    exit()
+robot = Robot() # para uso real
+#robot = Supervisor() # para treinamento
+# if robot is None:
+#     print("Robô não está em modo de treinamento!")
+#     exit()
     
 print("Code updated")
 
@@ -206,38 +208,66 @@ keyboard = Keyboard()
 
 keyboard.enable(PioneerControllers.time_step)
 
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+model = DinoRegressor(top_k=2).to(device)
+
+parametros = torch.load("../dino_regressor.pth", map_location=device)
+model.load_state_dict(parametros)
+model.eval()
+
 while robot.step(PioneerControllers.time_step) != -1:
     key = keyboard.getKey()
-
-    if key == -1:
-        pioneer.stop()
-
-    if key == ord("W"):
-        pioneer.moveFoward()
-
-    if key == ord("S"):
-        pioneer.moveBackward()
-
-    if key == ord("A"):
-        pioneer.rotateLeft()
-
-    if key == ord("D"):
-        pioneer.rotateRight()
-
-    if key == ord("L"):
-        lidar = pioneer.lidar
         
-        show_lidar_img(pioneer.lidarData(), lidar.getHorizontalResolution(), lidar.getNumberOfLayers(), lidar.getMaxRange())
+    if running:
+        lidar = pioneer.lidar
+        lidar_data = pioneer.lidarData()
+        
+        rgb = torch.from_numpy(np.array(pioneer.streamImage()))
+        depth_img = pp.range_img_to_img(lidar_data, lidar.getHorizontalResolution(), lidar.getNumberOfLayers(), lidar.getMaxRange())
+        depth = np.zeros(4, 512, 3)
+        depth[:, :, 0] = depth_img
+        depth_data = torch.from_numpy(depth)
+        
+        depth_resized = torch.nn.functional.interpolate(depth_data.permute(3, 1, 2), size=(64, 64), mode='bilinear', align_corners=False)
+        depth_resized = depth_resized.permute(2, 3, 1)
+        
+        inputs = torch.stack((rgb, depth_resized)).to(device)
+        
+        outputs = model(inputs)
+        print(outputs)
+    else:
+        if key == -1:
+            pioneer.stop()
 
-    if key == ord("C"):
-        show_camera_img(pioneer.streamImage())
+        if key == ord("W"):
+            pioneer.moveFoward()
 
-    if key == ord("K"):
-        print("getting camera and lidar sample")
-        pioneer.streamImage()
-        print("image saved")
-        pioneer.lidarData()
-        print("lidar saved")
-    
-    if key == ord("T"):
-        pioneer.collect_training_data(1000)
+        if key == ord("S"):
+            pioneer.moveBackward()
+
+        if key == ord("A"):
+            pioneer.rotateLeft()
+
+        if key == ord("D"):
+            pioneer.rotateRight()
+        
+        if key == ord("R"):
+            pioneer.rotateRight()
+
+        if key == ord("L"):
+            lidar = pioneer.lidar
+            
+            show_lidar_img(pioneer.lidarData(), lidar.getHorizontalResolution(), lidar.getNumberOfLayers(), lidar.getMaxRange())
+
+        if key == ord("C"):
+            show_camera_img(pioneer.streamImage())
+
+        if key == ord("K"):
+            print("getting camera and lidar sample")
+            pioneer.streamImage()
+            print("image saved")
+            pioneer.lidarData()
+            print("lidar saved")
+        
+        if key == ord("T"):
+            pioneer.collect_training_data(1000)

@@ -20,9 +20,33 @@ if __name__ == '__main__':
     total_epochs = 50
     total_samples = len(dataset)
     
+    
+    class CosineLoss(nn.Module):
+        def __init__(self):
+            super(CosineLoss, self).__init__()
+
+        def forward(self, pred, target):
+            # pred e target são ângulos em radianos (apenas a coluna do ângulo)
+            cos_sim = torch.cos(pred - target).mean()  # Similaridade cosseno
+            return 1 - cos_sim  # Loss = 1 - cos(similaridade)
+        
+    class CombinedLoss(nn.Module):
+        def __init__(self, w1, w2):
+            super(CombinedLoss, self).__init__()
+            self.w1 = w1
+            self.w2 = w2
+            self.cosine_loss = CosineLoss()
+
+        def forward(self, pred, target):
+            mse_dist = torch.mean((pred[:, 0] - target[:, 0]) ** 2)  # MSE para distância
+            cos_angle = self.cosine_loss(pred[:, 1], target[:, 1])  # Cosine loss para ângulo
+            return self.w1 * mse_dist + self.w2 * cos_angle
+    
     model = DinoRegressor(top_k=2).to(device)
-    criterion = nn.MSELoss()
-    optimizer = optim.AdamW(model.parameters(), lr=1e-2, weight_decay=0.01)
+    criterion_dist = nn.MSELoss()
+    criterion_angle = CosineLoss()
+    criterion = CombinedLoss(w1=0.5, w2=0.5)
+    optimizer = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=0.01)
     
     losses_train = []
     losses_val = []
@@ -50,8 +74,8 @@ if __name__ == '__main__':
             # forward + backward + optimize
             outputs = model(inputs)
             
-            loss_dist = criterion(outputs[:, 0], labels[:, 0])  # Loss para dist
-            loss_angle = criterion(outputs[:, 1], labels[:, 1])  # Loss para angle
+            loss_dist = criterion_dist(outputs[:, 0], labels[:, 0])  # Loss para dist
+            loss_angle = criterion_angle(outputs[:, 1], labels[:, 1])  # Loss para angle
             loss = criterion(outputs, labels)
             
             loss.backward()
@@ -77,8 +101,8 @@ if __name__ == '__main__':
                 
                 outputs = model(inputs)
                 
-                loss_dist = criterion(outputs[:, 0], labels[:, 0])  # Loss para dist
-                loss_angle = criterion(outputs[:, 1], labels[:, 1])  # Loss para angle
+                loss_dist = criterion_dist(outputs[:, 0], labels[:, 0])  # Loss para dist
+                loss_angle = criterion_angle(outputs[:, 1], labels[:, 1])  # Loss para angle
                 loss = criterion(outputs, labels)
                 
                 val_running_loss_dist += loss_dist.item()
@@ -98,8 +122,10 @@ if __name__ == '__main__':
         losses_val.append((val_running_loss_dist, val_running_loss_angle, val_running_loss_total))
         
     plt.figure(figsize=(15, 5))
-        
-    plt.subplot(1, 2, 1)
+    
+    print('Finished Training')
+    torch.save(model.parameters(), 'dino_regressor.pth')
+    
     plt.plot(range(1, len(losses_train) + 1), losses_train[2], label='Training Total Loss', color='blue')
     plt.plot(range(1, len(losses_val) + 1), losses_val[2], label='Validation Total Loss', color='orange')
     plt.plot(range(1, len(losses_train) + 1), losses_train[0], label='DistToObject Training Loss', color='green')
@@ -114,6 +140,3 @@ if __name__ == '__main__':
         
     plt.tight_layout()
     plt.show()
-    
-    print('Finished Training')
-    torch.save(model.parameters(), 'dino_regressor.pth')
