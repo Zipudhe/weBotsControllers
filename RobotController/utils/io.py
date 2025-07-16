@@ -1,5 +1,4 @@
 import sys
-import torch
 import matplotlib.pyplot as plt
 import numpy as np
 import utils.pre_processing as pp
@@ -12,10 +11,10 @@ def write_matrix_data(matrix):
 
 
 def write_lidar_object_data(lidar_data, width, height, max_range):
-    depth_img = pp.range_img_to_img(lidar_data, width, height, max_range)
+    depth_img = pp.range_img_to_img(lidar_data, width, height, max_range).tolist()
 
     fout = open("../lidar_object_data.txt", "a")
-    fout.write(np.array2string(depth_img, max_line_width=sys.maxsize, threshold=sys.maxsize) + "\n")
+    fout.write(str(depth_img) + "\n")
     fout.close()
         
 def show_lidar_img(range_img: list[float], width: int, height: int, max_range: float):
